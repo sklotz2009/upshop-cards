@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upshop Digital Card</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d161d;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px 16px;
+        }
+        .container {
+            width: 100%;
+            max-width: 390px;
+            background: #11202b;
+            border-radius: 28px;
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            display: none;
+        }
+        .initials-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #718290, #405364);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 600;
+            margin: 0 auto 20px;
+            letter-spacing: 1px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+        .title {
+            color: #9ab0c2;
+            font-size: 15px;
+            margin-bottom: 28px;
+            line-height: 1.4;
+        }
+        .btn-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn-primary {
+            background-color: #f6f3eb;
+            color: #11202b;
+        }
+        .btn-secondary {
+            background-color: #1b2f3e;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: #7d96aa;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            margin-top: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #qr-container {
+            display: none;
+            margin-top: 16px;
+            padding: 14px;
+            background: #ffffff;
+            border-radius: 16px;
+            display: inline-block;
+        }
+        #qr-wrapper {
+            display: none;
+            text-align: center;
+        }
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="card" class="container">
+        <div id="avatar" class="initials-circle">--</div>
+        <h1 id="name">Loading...</h1>
+        <p id="title" class="title"></p>
+
+        <div class="btn-list">
+            <a id="email-btn" href="#" class="btn btn-primary">✉️ Email Me Directly</a>
+            <a id="sms-btn" href="#" class="btn btn-secondary">💬 Text Me Directly</a>
+            <a id="web-btn" href="https://upshop.com" target="_blank" class="btn btn-secondary">🌐 Upshop Website</a>
+            <a id="case-study-btn" href="#" target="_blank" class="btn btn-secondary">📄 Case Study: Success Stories</a>
+            <button id="qr-toggle-btn" class="btn btn-ghost" type="button">📱 Show QR Code</button>
+        </div>
+
+        <div id="qr-wrapper">
+            <div id="qr-container">
+                <img id="qr-img" src="" alt="QR Code" style="display:block; width:160px; height:160px;" />
+            </div>
+        </div>
+    </div>
+
+    <div id="error" class="container" style="display:none;">
+        <p class="error-msg">Rep ID not found. Check the ID parameter in the URL or the Google Sheet.</p>
+    </div>
+
+    <script>
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTOglE6LK4ZnhrWJKnX6fzuV9IT2YIK1kSqhS4_KRVyXwUZtGMN6QiDIFUhLtVbRS823DvANpYvphpO/pub?output=csv';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const repId = (urlParams.get('id') || 'susana').trim().toLowerCase();
+
+        function getInitials(fullName) {
+            if (!fullName) return '';
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+
+        Papa.parse(SHEET_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const rows = results.data;
+                const rep = rows.find(r => r.ID && r.ID.trim().toLowerCase() === repId);
+
+                if (rep) {
+                    document.getElementById('name').innerText = rep.Name;
+                    document.getElementById('title').innerText = rep.Title ? `${rep.Title} \n@ Upshop` : '@ Upshop';
+                    document.getElementById('avatar').innerText = getInitials(rep.Name);
+
+                    const emailSubject = rep.Subject ? encodeURIComponent(rep.Subject) : 'Connecting via NFC';
+                    document.getElementById('email-btn').href = `mailto:${rep.Email}?subject=${emailSubject}`;
+                    document.getElementById('sms-btn').href = `sms:${rep.Phone}`;
+                    if (rep.CaseStudy) {
+                        document.getElementById('case-study-btn').href = rep.CaseStudy;
+                    }
+
+                    const currentUrl = window.location.href;
+                    document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentUrl)}`;
+
+                    document.getElementById('card').style.display = 'block';
+                } else {
+                    document.getElementById('error').style.display = 'block';
+                }
+            },
+            error: function() {
+                document.getElementById('error').style.display = 'block';
+            }
+        });
+
+        const qrToggleBtn = document.getElementById('qr-toggle-btn');
+        const qrWrapper = document.getElementById('qr-wrapper');
+        qrToggleBtn.addEventListener('click', () => {
+            const isHidden = qrWrapper.style.display === 'none' || qrWrapper.style.display === '';
+            qrWrapper.style.display = isHidden ? 'block' : 'none';
+            qrToggleBtn.innerText = isHidden ? 'Hide QR Code' : '📱 Show QR Code';
+        });
+    </script>
+</body>
+</html>
